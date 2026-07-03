@@ -67,7 +67,6 @@ def test_mudar_status_flag_com_sucesso(mock_supabase):
 
 @patch("repository.flag_repository.supabase")
 def test_buscar_registro_flag_deve_retornar_lista_de_flags(mock_supabase):
-    data_brasil = datetime.now().strftime("%d/%m/%Y")
     # 1. Arrange (Preparação da simulação)
     task_id_busca = "task-abc-123"
     # Simula o banco retornando uma lista com dois registros brutos encontrados
@@ -86,16 +85,16 @@ def test_buscar_registro_flag_deve_retornar_lista_de_flags(mock_supabase):
             "tb_flags_task_id": task_id_busca,
             "tb_flags_task_user_id": "user-1",
             "tb_flags_status": "PRONTO_PARA_REVISAO",
-            "tb_flags_updated_at": data_brasil
+            "tb_flags_updated_at": None 
         }
     ]
     # Configura o encadeamento fluente: supabase.table().select().eq().execute()
     mock_execute = MagicMock()
     mock_execute.data = mock_dados_retorno_db
-    mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_execute
+    mock_supabase.table.return_value.select.return_value.execute.return_value = mock_execute
 
     # 2. Act (Execução do método modificado)
-    resultado = Flag_repository.buscar_registro_flag(task_id_busca)
+    resultado = Flag_repository.buscar_todos_registros()
 
     # 3. Assert (Verificações)
     assert isinstance(resultado, list)
@@ -112,9 +111,6 @@ def test_buscar_registro_flag_deve_retornar_lista_de_flags(mock_supabase):
     # Inspeciona se a chamada ao Supabase manteve a ordem exata de métodos e parâmetros
     mock_supabase.table.assert_called_once_with("tb_flags_register")
     mock_supabase.table.return_value.select.assert_called_once_with("*")
-    mock_supabase.table.return_value.select.return_value.eq.assert_called_once_with(
-        "tb_flags_task_id", task_id_busca
-    )
 
 
 @patch("repository.flag_repository.supabase")
@@ -149,3 +145,61 @@ def test_mudar_status_flag_deve_lancar_value_error_quando_nao_encontrar_task(moc
         Flag_repository.mudar_status_flag(payload_entrada)
     # Valida se o texto da mensagem de erro está exatamente igual ao programado no repositório
     assert str(exc_info.value) == mensagem_esperada
+
+@patch("repository.flag_repository.supabase")
+def test_buscar_registro_flag_deve_retornar_objeto_flag_response_com_sucesso(mock_supabase):
+    # Arrange
+    task_id_alvo = "task-sucesso-123"
+    
+    # Simula o banco de dados retornando uma lista contendo exatamente um registro bruto
+    mock_dados_db = [{
+        "tb_flags_id": 99,
+        "tb_flags_created_at": "2026-07-03T16:00:00Z",
+        "tb_flags_task_id": task_id_alvo,
+        "tb_flags_task_user_id": "user-operacional",
+        "tb_flags_status": "ENTREGA_PARCIAL",
+        "tb_flags_updated_at": None
+    }]
+    
+    # Configura o encadeamento fluente com o .eq() que este método utiliza
+    mock_execute = MagicMock()
+    mock_execute.data = mock_dados_db
+    mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_execute
+
+    # Act
+    resultado = Flag_repository.buscar_registro_flag(task_id_alvo)
+
+    # Assert
+    assert isinstance(resultado, FlagResponse)
+    assert resultado.tb_flags_task_id == task_id_alvo
+    assert resultado.tb_flags_status == FlagStatusEnum.ENTREGA_PARCIAL
+    
+    # Inspeciona se a chamada encadeou corretamente os filtros no Supabase
+    mock_supabase.table.assert_called_once_with("tb_flags_register")
+    mock_supabase.table.return_value.select.assert_called_once_with("*")
+    mock_supabase.table.return_value.select.return_value.eq.assert_called_once_with("tb_flags_task_id", task_id_alvo)
+
+
+# -------------------------------------------------------------------------
+# 2. TESTE DE UNIDADE: buscar_todos_registros -> Retorno de Lista Vazia []
+# -------------------------------------------------------------------------
+@patch("repository.flag_repository.supabase")
+def test_buscar_todos_registros_deve_retornar_lista_vazia_quando_banco_estiver_limpo(mock_supabase):
+    # Arrange
+    # Simula o banco respondendo sem erros estruturais, mas sem nenhuma linha cadastrada
+    mock_execute = MagicMock()
+    mock_execute.data = []  
+    
+    # Configura o encadeamento fluente sem o .eq(), condizente com a busca global
+    mock_supabase.table.return_value.select.return_value.execute.return_value = mock_execute
+
+    # Act
+    resultado = Flag_repository.buscar_todos_registros()
+
+    # Assert
+    assert isinstance(resultado, list)
+    assert len(resultado) == 0  # Valida se passou exatamente pelo if not resposta.data -> return []
+    
+    # Inspeciona as chamadas realizadas
+    mock_supabase.table.assert_called_once_with("tb_flags_register")
+    mock_supabase.table.return_value.select.assert_called_once_with("*")

@@ -22,13 +22,27 @@ def id_task_compartilhada():
     yield id_teste
     supabase.table("tb_flags_register").delete().eq("tb_flags_task_id", id_teste).execute()
 
+@pytest.mark.integration
+def test_integracao_supabase_buscar_todos_registros_deve_retornar_lista_de_flag_response_com_sucesso(id_task_compartilhada):
+    resultado = Flag_repository.buscar_todos_registros()
+    assert isinstance(resultado, list)
+    assert len(resultado) > 0  # Garante que a lista não veio vazia
+
+    flag_criada_na_fixture = next(
+        (f for f in resultado if f.tb_flags_task_id == id_task_compartilhada), 
+        None
+    )
+
+    assert flag_criada_na_fixture is not None, f"A flag com id {id_task_compartilhada} deveria estar na listagem"
+    assert isinstance(flag_criada_na_fixture, FlagResponse)
+    assert flag_criada_na_fixture.tb_flags_status == FlagStatusEnum.ENTREGA_PARCIAL
+    assert flag_criada_na_fixture.tb_flags_id is not None  # PK gerada pelo banco
 
 # -------------------------------------------------------------------------
 # 1. TESTE DEDICADO DE INSERÇÃO (Boa prática adicionada)
 # -------------------------------------------------------------------------
 @pytest.mark.integration
 def test_integracao_supabase_deve_registrar_inicio_nova_flag_com_sucesso():
-    # Arrange - Usa um ID totalmente isolado para este teste específico
     id_task_exclusiva = "task-teste-insercao-exclusiva"
     dados_entrada = CreateFlag(
         tb_flags_task_id=id_task_exclusiva,
@@ -36,17 +50,13 @@ def test_integracao_supabase_deve_registrar_inicio_nova_flag_com_sucesso():
     )
 
     try:
-        # Act - Executa a inserção real
         resultado = Flag_repository.registrar_inicio_nova_flag(dados_entrada)
-
-        # Assert - Valida minuciosamente o comportamento do método de escrita
         assert isinstance(resultado, FlagResponse)
         assert resultado.tb_flags_task_id == id_task_exclusiva
         assert resultado.tb_flags_status == FlagStatusEnum.ENTREGA_PARCIAL
         assert resultado.tb_flags_id is not None  # Garante a PK gerada pelo Postgres
 
     finally:
-        # Teardown local - Limpa a sujeira gerada exclusivamente por este teste
         supabase.table("tb_flags_register").delete().eq("tb_flags_task_id", id_task_exclusiva).execute()
 
 
@@ -56,10 +66,8 @@ def test_integracao_supabase_deve_registrar_inicio_nova_flag_com_sucesso():
 @pytest.mark.integration
 def test_integracao_supabase_deve_garantir_existencia_da_flag(id_task_compartilhada):
     resultado = Flag_repository.buscar_registro_flag(id_task_compartilhada)
-    assert isinstance(resultado, list)
-    assert len(resultado) > 0
-    assert isinstance(resultado[0], FlagResponse)
-    assert resultado[0].tb_flags_task_id == id_task_compartilhada
+    assert isinstance(resultado, FlagResponse)
+    assert resultado.tb_flags_task_id == id_task_compartilhada
 
 
 @pytest.mark.integration
@@ -88,8 +96,6 @@ def test_integracao_supabase_mudar_status_flag_deve_lancar_value_error_para_task
     )
 
     mensagem_esperada = f"Nenhuma flag encontrada para a task {id_inexistente}"
-
-    # Act & Assert - O banco real vai retornar zero linhas afetadas e o Python deve lançar o ValueError
     with pytest.raises(ValueError) as exc_info:
         Flag_repository.mudar_status_flag(payload_update)
 
@@ -101,12 +107,22 @@ def test_integracao_supabase_mudar_status_flag_deve_lancar_value_error_para_task
 # -------------------------------------------------------------------------
 @pytest.mark.integration
 def test_integracao_supabase_buscar_registro_flag_deve_retornar_lista_vazia_para_task_inexistente():
-    # Arrange - Usa um ID fictício que não possui registros associados
     id_inexistente = "task-integracao-sem-dados-999"
-
-    # Act - Executa a consulta real no Supabase
     resultado = Flag_repository.buscar_registro_flag(id_inexistente)
 
-    # Assert - Garante que a API do banco respondeu sem erros, e o repositório devolveu uma lista puramente vazia []
     assert isinstance(resultado, list)
     assert len(resultado) == 0
+
+@pytest.mark.integration
+def test_integracao_supabase_buscar_todos_registros_deve_retornar_lista_vazia_quando_tabela_nao_tiver_dados():
+    supabase.table("tb_flags_register").delete().neq("tb_flags_task_id", "forcar_delete_de_tudo").execute()
+
+    try:
+        resultado = Flag_repository.buscar_todos_registros()
+        assert isinstance(resultado, list)
+        assert len(resultado) == 0  # Garante que bateu no banco real e retornou zero registros
+
+    finally:
+        pass
+
+

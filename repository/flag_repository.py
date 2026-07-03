@@ -20,10 +20,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class Flag_repository:
     @staticmethod
-    def registrar_inicio_nova_flag(task: CreateFlag) -> FlagResponse:
+    def registrar_inicio_nova_flag(flag: CreateFlag) -> FlagResponse:
         dados_insercao = {
-            "tb_flags_task_id": task.tb_flags_task_id,
-            "tb_flags_task_user_id": task.tb_flags_task_user_id,
+            "tb_flags_task_id": flag.tb_flags_task_id,
+            "tb_flags_task_user_id": flag.tb_flags_task_user_id,
             "tb_flags_status": FlagStatusEnum.ENTREGA_PARCIAL,
         }
         resposta = supabase.table("tb_flags_register").insert(dados_insercao).execute()
@@ -53,13 +53,20 @@ class Flag_repository:
         )
 
     @staticmethod
-    def buscar_registro_flag(task_id: str) -> list[FlagResponse]:
+    def buscar_registro_flag(task_id: str) -> FlagResponse:
         resposta = (
             supabase.table("tb_flags_register")
             .select("*")
             .eq("tb_flags_task_id", task_id)
             .execute()
         )
+        if not resposta.data:
+            return []
+        return FlagResponse(**resposta.data[0])
+
+    @staticmethod
+    def buscar_todos_registros() -> list[FlagResponse]:
+        resposta = supabase.table("tb_flags_register").select("*").execute()
         if not resposta.data:
             return []
         return [FlagResponse(**registro) for registro in resposta.data]
