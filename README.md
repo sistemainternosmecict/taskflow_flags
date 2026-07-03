@@ -18,12 +18,12 @@ Este módulo é um componente interno projetado para estender o sistema de gest�
 O projeto adota uma arquitetura limpa em camadas para isolar completamente as responsabilidades de negócio da infraestrutura de banco de dados e rotas HTTP.
 
 ```text
-📂 com.smecict.flag_api
+📂 taskflow_flags
  ┃
- ┣ 📂 domain_layer           # Schemas Pydantic, DTOs e Contratos de Dados
- ┣ 📂 controller             # Rotas HTTP e Endpoints (FastAPI)
- ┣ 📂 service_layer          # Camada de Regras de Negócio e Transições de Status
- ┣ 📂 repository_layer       # Integração e Persistência de dados (Supabase)
+ ┣ 📂 domain           # Schemas Pydantic, DTOs e Contratos de Dados
+ ┣ 📂 routers             # Rotas HTTP e Endpoints (FastAPI)
+ ┣ 📂 service          # Camada de Regras de Negócio e Transições de Status
+ ┣ 📂 repository       # Integração e Persistência de dados (Supabase)
  ┗ 📂 tests                  # Testes Unitários e de Integração (Pytest)
 ```
 
@@ -48,8 +48,8 @@ O frontend consome os dados deste módulo para renderizar indicadores visuais ba
 ### 1. Clonar o repositório e acessar a pasta
 
 ```bash
-git clone https://github.com/usuario/flag-api.git
-cd flag-api
+git clone https://github.com/sistemainternosmecict/taskflow_flags.git
+cd taskflow_flags
 ```
 
 ### 2. Configurar o ambiente virtual e dependências
@@ -70,7 +70,7 @@ FLAG_SUPABASE_KEY=sua-chave-api-anon-ou-service-role
 ### 4. Iniciar o Servidor
 
 ```bash
-uvicorn controller.api_routes:app --reload
+uv run uvicorn main:app --reload
 ```
 
 A documentação interativa e auto-gerada da API estará disponível em: `http://127.0.0.1:8000/docs`
@@ -81,16 +81,11 @@ A documentação interativa e auto-gerada da API estará disponível em: `http:/
 
 O desenvolvimento deste módulo priorizou a abordagem *Bottom-Up*, onde as camadas de validação (`domain_layer`) e banco de dados (`repository_layer`) foram criadas e testadas diretamente através do Pytest antes mesmo da criação das rotas HTTP, garantindo robustez na persistência.
 
-Para rodar a suíte de testes locais:
+Para rodar a suíte de testes locais, com testes de unidade e testes de integração, exibindo a cobertura:
 
 ```bash
-pytest -v
-```
-
-Para verificar a cobertura de código das camadas de lógica e persistência:
-
-```bash
-pytest --cov=repository_layer --cov=service_layer
+chmod +x pipeline.sh
+./pipeline.sh
 ```
 
 ---
@@ -103,6 +98,9 @@ pytest --cov=repository_layer --cov=service_layer
 ### `GET /api/v1/flag/{task_id}`
 * **Descrição:** Retorna as informações e o status atual da flag para que o Frontend renderize a bolinha correspondente.
 * **Resposta:** `FlagResponse`
+### `GET /api/v1/flag`
+* **Descrição:** Retorna as informações e o status atual de todas as flags iniciadas.
+* **Resposta:** `list[FlagResponse]`
 ### `PUT /api/v1/flag/{task_id}`
 * **Descrição:** Acionado pelo botão de ação na interface. Atualiza o status da flag (ex: altera de `ENTREGA_PARCIAL` para `PRONTO_PARA_REVISAO`).
 * **Payload:** `UpdateFlagStatus`
