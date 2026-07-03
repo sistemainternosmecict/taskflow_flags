@@ -1,0 +1,25 @@
+[project]
+name = "flag-register"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.139.0",
+    "pytest>=9.1.1",
+    "python-dotenv>=1.2.2",
+    "supabase>=2.31.0",
+]
+[tool.pytest.ini_options]
+pythonpath = ["."]
+markers = [
+	"integration: testes que dependem de banco de dados ou serviços externos"
+]
+filterwarnings = [
+	"ignore::DeprecationWarning"
+]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]
