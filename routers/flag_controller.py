@@ -32,3 +32,11 @@ def buscar_flags():
 	flag_service = Flag_service(flag_repo)
 	response = flag_service.obter_todas_flags()
 	return response
+
+@router.delete("/flag/{task_id}")
+def remover_flag(task_id: str):
+	flag_repo = Flag_repository()
+	flag_service = Flag_service(flag_repo)
+	response = flag_service.remover_flag(task_id)
+	return response
+

@@ -70,3 +70,16 @@ class Flag_repository:
         if not resposta.data:
             return []
         return [FlagResponse(**registro) for registro in resposta.data]
+
+    @staticmethod
+    def remover_flag(task_id: str) -> FlagResponse:
+        resposta = (
+            supabase.table("tb_flags_register")
+            .delete()
+            .eq("tb_flags_task_id", task_id)
+            .execute()
+        )
+        if not resposta.data:
+            raise ValueError(f"Nenhuma flag encontrada para a task {task_id}")
+        return FlagResponse(**resposta.data[0])
+

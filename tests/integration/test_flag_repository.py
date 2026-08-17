@@ -126,3 +126,37 @@ def test_integracao_supabase_buscar_todos_registros_deve_retornar_lista_vazia_qu
         pass
 
 
+# -------------------------------------------------------------------------
+# 5. TESTES DE INTEGRAÇÃO: remover_flag
+# -------------------------------------------------------------------------
+@pytest.mark.integration
+def test_integracao_supabase_remover_flag_com_sucesso():
+    id_task_delete = "task-teste-remocao-exclusiva"
+    dados_entrada = CreateFlag(
+        tb_flags_task_id=id_task_delete,
+        tb_flags_task_user_id="user-teste-remocao",
+    )
+    Flag_repository.registrar_inicio_nova_flag(dados_entrada)
+
+    resultado = Flag_repository.remover_flag(id_task_delete)
+
+    assert isinstance(resultado, FlagResponse)
+    assert resultado.tb_flags_task_id == id_task_delete
+
+    # Confirma que o registro foi realmente deletado do banco
+    consulta_pos_delete = Flag_repository.buscar_registro_flag(id_task_delete)
+    assert consulta_pos_delete == []
+
+
+@pytest.mark.integration
+def test_integracao_supabase_remover_flag_deve_lancar_value_error_para_task_inexistente():
+    id_inexistente = "task-integracao-inexistente-delete-404"
+
+    mensagem_esperada = f"Nenhuma flag encontrada para a task {id_inexistente}"
+    with pytest.raises(ValueError) as exc_info:
+        Flag_repository.remover_flag(id_inexistente)
+
+    assert str(exc_info.value) == mensagem_esperada
+
+
+

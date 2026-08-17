@@ -16,3 +16,7 @@ class Flag_service:
 
     def obter_todas_flags(self) -> list[FlagResponse]:
         return self.repository.buscar_todos_registros()
+
+    def remover_flag(self, task_id: str) -> FlagResponse:
+        return self.repository.remover_flag(task_id)
+

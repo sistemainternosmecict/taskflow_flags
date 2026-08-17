@@ -104,8 +104,12 @@ chmod +x pipeline.sh
 ### `PUT /api/v1/flag/{task_id}`
 * **Descrição:** Acionado pelo botão de ação na interface. Atualiza o status da flag (ex: altera de `ENTREGA_PARCIAL` para `PRONTO_PARA_REVISAO`).
 * **Payload:** `UpdateFlagStatus`
+### `DELETE /api/v1/flag/{task_id}`
+* **Descrição:** Remove o registro da flag do banco de dados para a tarefa indicada por `task_id`.
+* **Resposta:** `FlagResponse`
 ---
 
 ## 📄 Licença
+
 
 Este projeto é de uso interno do setor e não possui licença de distribuição pública.

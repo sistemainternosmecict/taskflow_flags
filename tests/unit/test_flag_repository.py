@@ -203,3 +203,47 @@ def test_buscar_todos_registros_deve_retornar_lista_vazia_quando_banco_estiver_l
     # Inspeciona as chamadas realizadas
     mock_supabase.table.assert_called_once_with("tb_flags_register")
     mock_supabase.table.return_value.select.assert_called_once_with("*")
+
+
+@patch("repository.flag_repository.supabase")
+def test_remover_flag_com_sucesso(mock_supabase):
+    task_id_alvo = "task-delete-123"
+    mock_dados_retorno_db = {
+        "tb_flags_id": 10,
+        "tb_flags_created_at": "2026-07-04T10:00:00Z",
+        "tb_flags_task_id": task_id_alvo,
+        "tb_flags_task_user_id": "user-delete-001",
+        "tb_flags_status": "ENTREGA_PARCIAL",
+        "tb_flags_updated_at": None,
+    }
+    mock_execute = MagicMock()
+    mock_execute.data = [mock_dados_retorno_db]
+    mock_supabase.table.return_value.delete.return_value.eq.return_value.execute.return_value = mock_execute
+
+    resultado = Flag_repository.remover_flag(task_id_alvo)
+
+    assert isinstance(resultado, FlagResponse)
+    assert resultado.tb_flags_id == 10
+    assert resultado.tb_flags_task_id == task_id_alvo
+    assert resultado.tb_flags_status == FlagStatusEnum.ENTREGA_PARCIAL
+
+    mock_supabase.table.assert_called_once_with("tb_flags_register")
+    mock_supabase.table.return_value.delete.assert_called_once()
+    mock_supabase.table.return_value.delete.return_value.eq.assert_called_once_with(
+        "tb_flags_task_id", task_id_alvo
+    )
+
+
+@patch("repository.flag_repository.supabase")
+def test_remover_flag_deve_lancar_value_error_quando_nao_encontrar_task(mock_supabase):
+    id_inexistente = "task-inexistente-404"
+    mock_execute = MagicMock()
+    mock_execute.data = []
+    mock_supabase.table.return_value.delete.return_value.eq.return_value.execute.return_value = mock_execute
+
+    mensagem_esperada = f"Nenhuma flag encontrada para a task {id_inexistente}"
+    with pytest.raises(ValueError) as exc_info:
+        Flag_repository.remover_flag(id_inexistente)
+
+    assert str(exc_info.value) == mensagem_esperada
+
