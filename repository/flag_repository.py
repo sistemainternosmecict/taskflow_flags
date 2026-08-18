@@ -72,6 +72,21 @@ class Flag_repository:
         return [FlagResponse(**registro) for registro in resposta.data]
 
     @staticmethod
+    def buscar_flags_por_task_ids(task_ids: list[str]) -> list[FlagResponse]:
+        if not task_ids:
+            return []
+        ids_formatados = [str(t_id) for t_id in task_ids]
+        resposta = (
+            supabase.table("tb_flags_register")
+            .select("*")
+            .in_("tb_flags_task_id", ids_formatados)
+            .execute()
+        )
+        if not resposta.data:
+            return []
+        return [FlagResponse(**registro) for registro in resposta.data]
+
+    @staticmethod
     def remover_flag(task_id: str) -> FlagResponse:
         resposta = (
             supabase.table("tb_flags_register")

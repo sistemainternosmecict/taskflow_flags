@@ -159,4 +159,38 @@ def test_integracao_supabase_remover_flag_deve_lancar_value_error_para_task_inex
     assert str(exc_info.value) == mensagem_esperada
 
 
+# -------------------------------------------------------------------------
+# 6. TESTES DE INTEGRAÇÃO: buscar_flags_por_task_ids
+# -------------------------------------------------------------------------
+@pytest.mark.integration
+def test_integracao_supabase_buscar_flags_por_task_ids():
+    id_task_batch = "task-teste-batch-001"
+    dados_entrada = CreateFlag(
+        tb_flags_task_id=id_task_batch,
+        tb_flags_task_user_id="user-teste-batch",
+    )
+    Flag_repository.registrar_inicio_nova_flag(dados_entrada)
+
+    try:
+        resultado = Flag_repository.buscar_flags_por_task_ids([id_task_batch, "task-inexistente-xyz"])
+        assert isinstance(resultado, list)
+        assert len(resultado) == 1
+        assert resultado[0].tb_flags_task_id == id_task_batch
+    finally:
+        supabase.table("tb_flags_register").delete().eq("tb_flags_task_id", id_task_batch).execute()
+
+
+@pytest.mark.integration
+def test_integracao_supabase_buscar_flags_por_task_ids_vazio():
+    resultado = Flag_repository.buscar_flags_por_task_ids([])
+    assert resultado == []
+
+
+@pytest.mark.integration
+def test_integracao_supabase_buscar_flags_por_task_ids_inexistentes_retorna_lista_vazia():
+    resultado = Flag_repository.buscar_flags_por_task_ids(["task-inexistente-batch-999"])
+    assert isinstance(resultado, list)
+    assert len(resultado) == 0
+
+
 

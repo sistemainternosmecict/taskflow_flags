@@ -247,3 +247,59 @@ def test_remover_flag_deve_lancar_value_error_quando_nao_encontrar_task(mock_sup
 
     assert str(exc_info.value) == mensagem_esperada
 
+
+@patch("repository.flag_repository.supabase")
+def test_buscar_flags_por_task_ids_com_sucesso(mock_supabase):
+    task_ids_alvo = ["task-1", "task-2"]
+    mock_dados_retorno_db = [
+        {
+            "tb_flags_id": 1,
+            "tb_flags_created_at": "2026-07-04T10:00:00Z",
+            "tb_flags_task_id": "task-1",
+            "tb_flags_task_user_id": "user-001",
+            "tb_flags_status": "ENTREGA_PARCIAL",
+            "tb_flags_updated_at": None,
+        },
+        {
+            "tb_flags_id": 2,
+            "tb_flags_created_at": "2026-07-04T11:00:00Z",
+            "tb_flags_task_id": "task-2",
+            "tb_flags_task_user_id": "user-002",
+            "tb_flags_status": "PRONTO_PARA_REVISAO",
+            "tb_flags_updated_at": None,
+        },
+    ]
+    mock_execute = MagicMock()
+    mock_execute.data = mock_dados_retorno_db
+    mock_supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = mock_execute
+
+    resultado = Flag_repository.buscar_flags_por_task_ids(task_ids_alvo)
+
+    assert isinstance(resultado, list)
+    assert len(resultado) == 2
+    assert isinstance(resultado[0], FlagResponse)
+    assert resultado[0].tb_flags_task_id == "task-1"
+    assert resultado[1].tb_flags_task_id == "task-2"
+
+    mock_supabase.table.assert_called_once_with("tb_flags_register")
+    mock_supabase.table.return_value.select.assert_called_once_with("*")
+    mock_supabase.table.return_value.select.return_value.in_.assert_called_once_with(
+        "tb_flags_task_id", task_ids_alvo
+    )
+
+
+def test_buscar_flags_por_task_ids_lista_vazia_retorna_vazio():
+    resultado = Flag_repository.buscar_flags_por_task_ids([])
+    assert resultado == []
+
+
+@patch("repository.flag_repository.supabase")
+def test_buscar_flags_por_task_ids_sem_resultados_retorna_vazio(mock_supabase):
+    mock_execute = MagicMock()
+    mock_execute.data = []
+    mock_supabase.table.return_value.select.return_value.in_.return_value.execute.return_value = mock_execute
+
+    resultado = Flag_repository.buscar_flags_por_task_ids(["task-inexistente"])
+
+    assert resultado == []
+

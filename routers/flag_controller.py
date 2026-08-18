@@ -1,7 +1,14 @@
 from fastapi import APIRouter
 from repository.flag_repository import Flag_repository
 from service.flag_service import Flag_service
-from domain.schemas import CreateFlag, CreateFlagResponse, UpdateFlagStatus, UpdateFlagResponse, FlagResponse
+from domain.schemas import (
+	CreateFlag,
+	CreateFlagResponse,
+	UpdateFlagStatus,
+	UpdateFlagResponse,
+	FlagResponse,
+	TaskBatchRequest,
+)
 
 router = APIRouter()
 
@@ -31,6 +38,15 @@ def buscar_flags():
 	flag_repo = Flag_repository()
 	flag_service = Flag_service(flag_repo)
 	response = flag_service.obter_todas_flags()
+	return response
+
+@router.post("/flag/batch", response_model=list[FlagResponse])
+def buscar_flags_por_tasks(payload: TaskBatchRequest):
+	if not payload.task_ids:
+		return []
+	flag_repo = Flag_repository()
+	flag_service = Flag_service(flag_repo)
+	response = flag_service.buscar_flags_por_task_ids(payload.task_ids)
 	return response
 
 @router.delete("/flag/{task_id}")
