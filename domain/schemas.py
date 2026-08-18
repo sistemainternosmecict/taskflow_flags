@@ -30,3 +30,7 @@ class UpdateFlagStatus(BaseModel):
 class UpdateFlagResponse(BaseModel):
     tb_flags_status: FlagStatusEnum
     tb_updated_at: str 
+
+
+class TaskBatchRequest(BaseModel):
+    task_ids: list[str]
