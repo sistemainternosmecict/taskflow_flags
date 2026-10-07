@@ -1,16 +1,27 @@
 # Módulo de Gestão de Flags de Atendimento 🚩
 
-Este módulo é um componente interno projetado para estender o sistema de gestão de demandas existente no setor. Ele permite o controle refinado do status de atendimento das tarefas (como entregas parciais ou prontas para revisão) de forma desacoplada, utilizando o Supabase como banco de dados auxiliar e fornecendo as informações necessárias para renderizar indicadores visuais (bolinhas coloridas) no Frontend com base no ID de cada tarefa.
+Este módulo é um componente interno projetado para estender o sistema de gestão de demandas existente no setor. Ele permite o controle refinado do status de atendimento das tarefas de forma desacoplada, utilizando um banco de dados MySQL local com persistência gerenciada via SQLAlchemy, fornecendo as informações necessárias para renderizar indicadores visuais no Frontend com base no ID de cada tarefa.
+
+---
+
+> [!WARNING]
+> ### ⚠️ BREAKING CHANGE: Migração de Supabase para MySQL Local (SQLAlchemy)
+> O serviço e a biblioteca do Supabase foram completamente descontinuados e removidos do projeto. A persistência de dados agora é realizada diretamente em banco de dados **MySQL local** utilizando **SQLAlchemy** e **PyMySQL**.
+> - **Variáveis descontinuadas:** `FLAG_SUPABASE_URL` e `FLAG_SUPABASE_KEY`.
+> - **Nova variável obrigatória:** `LOCAL_DB_URL` (formato `mysql+pymysql://<user>:<password>@<host>:<port>/<database>?charset=utf8mb4`).
+> - **Tabela utilizada:** `tb_flags_register`.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-* **Python 3.11+**
-* **FastAPI** (Construção das rotas e API)
+* **Python 3.13+**
+* **FastAPI** (Construção das rotas e API HTTP)
+* **SQLAlchemy** (ORM e gerenciamento de sessões do banco de dados)
+* **PyMySQL** (Driver de conexão MySQL)
 * **Pydantic** (Validação de dados e Schemas/DTOs)
-* **Supabase Python Client** (Persistência de dados)
-* **Pytest** (Testes automatizados e TDD)
+* **Pytest** & **pytest-cov** (Testes automatizados unitários e de integração com cobertura)
+
 ---
 
 ## 📐 Arquitetura e Estrutura de Pastas
@@ -20,26 +31,25 @@ O projeto adota uma arquitetura limpa em camadas para isolar completamente as re
 ```text
 📂 taskflow_flags
  ┃
- ┣ 📂 domain           # Schemas Pydantic, DTOs e Contratos de Dados
- ┣ 📂 routers             # Rotas HTTP e Endpoints (FastAPI)
+ ┣ 📂 domain           # Schemas Pydantic, DTOs e Enums de Status
+ ┣ 📂 routers          # Rotas HTTP e Endpoints (FastAPI)
  ┣ 📂 service          # Camada de Regras de Negócio e Transições de Status
- ┣ 📂 repository       # Integração e Persistência de dados (Supabase)
- ┗ 📂 tests                  # Testes Unitários e de Integração (Pytest)
+ ┣ 📂 repository       # Integração e Persistência de dados (SQLAlchemy / MySQL)
+ ┗ 📂 tests            # Testes Unitários e de Integração (Pytest)
 ```
 
 ---
 
 ## 🎨 Mapeamento de Status (Flags)
 
-O frontend consome os dados deste módulo para renderizar indicadores visuais baseados no `task_id`. As cores e comportamentos são definidos conforme o Enum `flag_status_enum`:
+O frontend consome os dados deste módulo para renderizar indicadores visuais baseados no `task_id`. As opções são definidas no Enum `FlagStatusEnum`:
 
-| Status | Cor no Front | Descrição / Regra de Negócio |
-| --- | --- | --- |
-| `ENTREGA_PARCIAL` | 🟠 Laranja | A tarefa recebeu atendimento, mas faltam itens na lista. |
-| `AGUARDANDO_EMPRESA` | 🔵 Azul | Aguardando retorno de fornecedor ou empresa externa. |
-| `FALTA_EQUIPAMENTO` | 🔴 Vermelho | Impedimento crítico por falta de estoque ou insumos. |
-| `PRONTO_PARA_REVISAO` | 🟢 Verde | Atendimento 100% concluído. Gatilho para avanço de etapa. |
-| `AGUARDANDO_OFICIO` | 🟣 Roxo | Depende de documentação oficial para receber anexo de relatório. |
+| Status | Descrição / Regra de Negócio |
+| --- | --- |
+| `ENTREGA_PARCIAL` | A tarefa recebeu atendimento, mas faltam itens na entrega. |
+| `DEVOLUCAO_EQUIPAMENTO` | Processo de devolução de equipamento em andamento. |
+| `AGUARDANDO_ESTOQUE` | Aguardando disponibilidade de itens no estoque. |
+| `RETIFICACAO_OFICIO` | Depende de retificação em documentação oficial/ofício. |
 
 ---
 
@@ -60,11 +70,11 @@ uv sync
 
 ### 3. Variáveis de Ambiente (`.env`)
 
-Crie um arquivo `.env` na raiz do projeto com as credenciais de acesso ao Supabase:
+Crie um arquivo `.env` na raiz do projeto configurando a URL do MySQL local:
 
 ```env
-FLAG_SUPABASE_URL=https://sua-url-do-supabase.supabase.co
-FLAG_SUPABASE_KEY=sua-chave-api-anon-ou-service-role
+LOCAL_DB_URL=mysql+pymysql://thyez:sistec2024@127.0.0.1:3306/smecict_2026?charset=utf8mb4
+CORS_ORIGINS=http://192.168.100.215:8081,http://192.168.100.215,https://taskflow-frontend-pqok.onrender.com
 ```
 
 ### 4. Iniciar o Servidor
@@ -79,9 +89,11 @@ A documentação interativa e auto-gerada da API estará disponível em: `http:/
 
 ## 🧪 Testes Automatizados (Pytest)
 
-O desenvolvimento deste módulo priorizou a abordagem *Bottom-Up*, onde as camadas de validação (`domain_layer`) e banco de dados (`repository_layer`) foram criadas e testadas diretamente através do Pytest antes mesmo da criação das rotas HTTP, garantindo robustez na persistência.
+O projeto possui uma suíte completa de testes:
+- **Testes Unitários:** Executam de forma isolada com mocks da camada de banco de dados (`tests/unit/`).
+- **Testes de Integração:** Validam operações reais de CRUD diretamente contra o banco MySQL local (`tests/integration/`).
 
-Para rodar a suíte de testes locais, com testes de unidade e testes de integração, exibindo a cobertura:
+Para rodar toda a suíte de testes com relatório de cobertura:
 
 ```bash
 chmod +x pipeline.sh
@@ -93,23 +105,34 @@ chmod +x pipeline.sh
 ## 🔗 Endpoints da API
 
 ### `POST /api/v1/flag/init`
-* **Descrição:** Inicializa o registro de uma nova flag na tabela `tb_flags_register` vinculada a um `task_id` existente.
-* **Payload:** `CreateFlag`
-### `GET /api/v1/flag/{task_id}`
-* **Descrição:** Retorna as informações e o status atual da flag para que o Frontend renderize a bolinha correspondente.
+* **Descrição:** Inicializa o registro de uma nova flag na tabela `tb_flags_register` vinculada a um `task_id`.
+* **Payload:** `CreateFlag` (`tb_flags_task_id`, `tb_flags_task_user_id`)
 * **Resposta:** `FlagResponse`
+
+### `GET /api/v1/flag/{task_id}`
+* **Descrição:** Retorna as informações e o status atual da flag vinculada ao `task_id`.
+* **Resposta:** `FlagResponse`
+
 ### `GET /api/v1/flag`
-* **Descrição:** Retorna as informações e o status atual de todas as flags iniciadas.
+* **Descrição:** Retorna a listagem completa de todas as flags registradas.
 * **Resposta:** `list[FlagResponse]`
-### `PUT /api/v1/flag/{task_id}`
-* **Descrição:** Acionado pelo botão de ação na interface. Atualiza o status da flag (ex: altera de `ENTREGA_PARCIAL` para `PRONTO_PARA_REVISAO`).
-* **Payload:** `UpdateFlagStatus`
+
+### `POST /api/v1/flag/batch`
+* **Descrição:** Retorna as flags correspondentes a uma lista de IDs de tarefas.
+* **Payload:** `TaskBatchRequest` (`task_ids: list[str]`)
+* **Resposta:** `list[FlagResponse]`
+
+### `PUT /api/v1/flag`
+* **Descrição:** Atualiza o status da flag vinculada à tarefa.
+* **Payload:** `UpdateFlagStatus` (`tb_flags_task_id`, `tb_flags_status`)
+* **Resposta:** `UpdateFlagResponse`
+
 ### `DELETE /api/v1/flag/{task_id}`
 * **Descrição:** Remove o registro da flag do banco de dados para a tarefa indicada por `task_id`.
 * **Resposta:** `FlagResponse`
+
 ---
 
 ## 📄 Licença
-
 
 Este projeto é de uso interno do setor e não possui licença de distribuição pública.

@@ -32,5 +32,4 @@ app.include_router(
 
 @app.get("/api/v1/health")
 def status():
-    return {"server_status":"ok"}
-
+    return {"server_status": "ok"}
